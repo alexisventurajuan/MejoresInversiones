@@ -1,9 +1,6 @@
-export function toNumber(value) {
-  if (value === null || value === undefined) return 0;
-  const s = String(value).replace(/[$,%\s]/g, "").replaceAll(",", "");
-  const n = Number(s);
-  return Number.isFinite(n) ? n : 0;
-}
+import {
+  toNumber,
+} from "./utilidades.js";
 
 export function calcPayback(initialInvestment, cashflows) {
   let accum = -initialInvestment;

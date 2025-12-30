@@ -10,7 +10,6 @@ import {
 } from "./db.js";
 
 import {
-  toNumber,
   buildCashflowsFromVentasCostos,
   calcPayback,
   paybackToYMD,
@@ -18,29 +17,14 @@ import {
   irr
 } from "./finance.js";
 
-/* -------------------- Helpers -------------------- */
-const $ = (id) => document.getElementById(id);
-
-function alertAndReturn(msg) {
-  alert(msg);
-  return null;
-}
-
-function normalizePct(p) {
-  const n = toNumber(p);
-  if (!Number.isFinite(n)) return NaN;
-  return n > 1 ? n / 100 : n;
-}
-
-function money(n) {
-  if (!Number.isFinite(n)) return "—";
-  return n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
-}
-
-function pctLabel(x) {
-  if (!Number.isFinite(x)) return "—";
-  return `${(x * 100).toFixed(2)}%`;
-}
+import {
+  toNumber,
+  money,
+  normalizePct,
+  pct,
+  $,
+  alertAndReturn
+} from "./utilidades.js";
 
 /* -------------------- State -------------------- */
 let articulo = null;
@@ -106,8 +90,8 @@ function renderContexto() {
   ctxArticuloNombre.textContent = articulo.articuloNombre ?? "—";
   ctxFechaCalculo.textContent = articulo.fechaCalculo ?? "—";
 
-  ctxImpuestos.textContent = pctLabel(articulo.impuestosPct);
-  ctxWacc.textContent = pctLabel(articulo.waccPct);
+  ctxImpuestos.textContent = pct(articulo.impuestosPct);
+  ctxWacc.textContent = pct(articulo.waccPct);
   ctxVidaUtil.textContent = `${articulo.vidaUtil ?? "—"} años`;
   ctxInvArticulo.textContent = money(articulo.inversion);
   ctxVrArticulo.textContent = money(articulo.valorResidual);
@@ -176,7 +160,6 @@ async function cargarProveedor(id) {
 
 /* -------------------- UI: Form actions -------------------- */
 function limpiarProveedor() {
-  selectedProveedorId = null;
   currentFlujos = [];
   proveedorNombre.value = "";
   productoNombre.value = "";
@@ -185,9 +168,12 @@ function limpiarProveedor() {
   vidaUtilProveedor.value = "";
   vrProveedor.value = "";
   pagoEquipo.value = "";
-
+  
   tablaFlujosWrapper.innerHTML = "";
   detalleFlujosWrapper.innerHTML = "";
+
+  selectedProveedorId = null;
+  localStorage.removeItem("selectedProveedorId");
 
   // quitar seleccionado visual
   [...proveedoresList.querySelectorAll("button.item-lista")].forEach(x => x.classList.remove("seleccionado"));
@@ -241,9 +227,6 @@ btnGuardarProveedor.addEventListener("click", async () => {
       pagoEquipo: payload.pagoEquipo
     });
 
-    selectedProveedorId = provId;
-    localStorage.setItem("selectedProveedorId", String(provId));
-
     await upsertFlujos(provId, currentFlujos);
     await renderProveedores();
     await cargarProveedor(provId);
@@ -277,10 +260,7 @@ btnRetirarProveedor.addEventListener("click", async () => {
     alert("Selecciona un proveedor para retirarlo.");
     return;
   }
-
   await retirarProveedor(selectedProveedorId);
-  selectedProveedorId = null;
-  localStorage.removeItem("selectedProveedorId");
 
   limpiarProveedor();
   await renderProveedores();

@@ -1,5 +1,7 @@
 const DB_NAME = "alt_inversion_db";
 const DB_VERSION = 1;
+const nombreTablaArticulos = "articulos"
+const nombreTablaProveedores = "proveedores"
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -9,15 +11,15 @@ function openDB() {
       const db = e.target.result;
 
       // Articulos
-      if (!db.objectStoreNames.contains("articulos")) {
-        const store = db.createObjectStore("articulos", { keyPath: "id", autoIncrement: true });
+      if (!db.objectStoreNames.contains(nombreTablaArticulos)) {
+        const store = db.createObjectStore(nombreTablaArticulos, { keyPath: "id", autoIncrement: true });
         store.createIndex("activo", "activo", { unique: false });
         store.createIndex("createdAt", "createdAt", { unique: false });
       }
 
       // Proveedores
-      if (!db.objectStoreNames.contains("proveedores")) {
-        const store = db.createObjectStore("proveedores", { keyPath: "id", autoIncrement: true });
+      if (!db.objectStoreNames.contains(nombreTablaProveedores)) {
+        const store = db.createObjectStore(nombreTablaProveedores, { keyPath: "id", autoIncrement: true });
         store.createIndex("articuloId", "articuloId", { unique: false });
         store.createIndex("activo", "activo", { unique: false });
       }
@@ -40,9 +42,8 @@ async function txStore(storeName, mode = "readonly") {
   return db.transaction(storeName, mode).objectStore(storeName);
 }
 
-/* ----------------- ARTICULOS ----------------- */
-export async function addArticulo(data) {
-  const store = await txStore("articulos", "readwrite");
+async function addRecord(storeName, data) {
+  const store = await txStore(storeName, "readwrite");
   const now = new Date().toISOString();
   const record = { ...data, activo: true, createdAt: now };
   return new Promise((resolve, reject) => {
@@ -52,23 +53,23 @@ export async function addArticulo(data) {
   });
 }
 
-export async function updateArticulo(id, data) {
-  const store = await txStore("articulos", "readwrite");
+async function updateRecord(storeName, Id, data) {
+  const store = await txStore(storeName, "readwrite");
 
   return new Promise((resolve, reject) => {
-    const getReq = store.get(Number(id));
+    const getReq = store.get(Number(Id));
 
     getReq.onsuccess = () => {
       const existing = getReq.result;
       if (!existing) {
-        reject(new Error("Artículo no encontrado para actualizar."));
+        reject(new Error(storeName + " no encontrado para actualizar."));
         return;
       }
 
       const updated = {
         ...existing,
         ...data,
-        id: Number(id),
+        Id: Number(Id),
         activo: existing.activo ?? true,
         createdAt: existing.createdAt ?? new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -83,8 +84,49 @@ export async function updateArticulo(id, data) {
   });
 }
 
+async function softDelete(storeName, Id) {
+  const store = await txStore(storeName, "readwrite");
+
+  return new Promise((resolve, reject) => {
+    const reqGet = store.get(Number(Id));
+
+    reqGet.onsuccess = () => {
+      const objetoRetirar = reqGet.result;
+      if (!objetoRetirar) {
+        resolve(false);
+        return;
+      }
+
+      objetoRetirar.activo = false;
+      objetoRetirar.updatedAt = new Date().toISOString();
+
+      const reqPut = store.put(objetoRetirar);
+      reqPut.onsuccess = () => resolve(true);
+      reqPut.onerror = () => reject(reqPut.error);
+    };
+
+    reqGet.onerror = () => reject(reqGet.error);
+  });
+}
+
+export async function getRecordById(storeName, Id) {
+  const store = await txStore(storeName, "readonly");
+
+  return new Promise((resolve, reject) => {
+    const req = store.get(Number(Id));
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* ----------------- ARTICULOS ----------------- */
+export const addArticulo = (data) => addRecord(nombreTablaArticulos, data);
+export const updateArticulo = (id,data) => updateRecord(nombreTablaArticulos, id, data);
+export const retirarArticulo = (id) => softDelete(nombreTablaArticulos, id);
+export const getArticuloById = (id) => getRecordById(nombreTablaArticulos, id);
+
 export async function listArticulosActivos() {
-  const store = await txStore("articulos", "readonly");
+  const store = await txStore(nombreTablaArticulos, "readonly");
 
   return new Promise((resolve, reject) => {
     const req = store.getAll();
@@ -98,128 +140,22 @@ export async function listArticulosActivos() {
   });
 }
 
-export async function getArticuloById(id) {
-  const store = await txStore("articulos", "readonly");
-  return new Promise((resolve, reject) => {
-    const req = store.get(Number(id));
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-export async function retirarArticulo(id) {
-  const store = await txStore("articulos", "readwrite");
-
-  return new Promise((resolve, reject) => {
-    const reqGet = store.get(Number(id));
-
-    reqGet.onsuccess = () => {
-      const articulo = reqGet.result;
-      if (!articulo) {
-        resolve(false);
-        return;
-      }
-
-      articulo.activo = false;
-      articulo.updatedAt = new Date().toISOString();
-
-      const reqPut = store.put(articulo);
-      reqPut.onsuccess = () => resolve(true);
-      reqPut.onerror = () => reject(reqPut.error);
-    };
-
-    reqGet.onerror = () => reject(reqGet.error);
-  });
-}
-
 /* ----------------- PROVEEDORES ----------------- */
-export async function addProveedor(data) {
-  const store = await txStore("proveedores", "readwrite");
-  const now = new Date().toISOString();
-  const record = { ...data, activo: true, createdAt: now };
-  return new Promise((resolve, reject) => {
-    const req = store.add(record);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-export async function updateProveedor(id, data) {
-  const store = await txStore("proveedores", "readwrite");
-
-  return new Promise((resolve, reject) => {
-    const reqGet = store.get(Number(id));
-
-    reqGet.onsuccess = () => {
-      const existing = reqGet.result;
-      if (!existing) {
-        reject(new Error("Proveedor no encontrado para actualizar."));
-        return;
-      }
-
-      const updated = {
-        ...existing,
-        ...data,
-        id: Number(id),
-        activo: existing.activo ?? true,
-        createdAt: existing.createdAt ?? new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      const reqPut = store.put(updated);
-      reqPut.onsuccess = () => resolve(true);
-      reqPut.onerror = () => reject(reqPut.error);
-    };
-
-    reqGet.onerror = () => reject(reqGet.error);
-  });
-}
-
+export const addProveedor = (data) => addRecord(nombreTablaProveedores, data);
+export const updateProveedor = (id, data) => updateRecord(nombreTablaProveedores, id, data);
+export const retirarProveedor = (id) => softDelete(nombreTablaProveedores, id);
+export const getProveedorById = (id) => getRecordById(nombreTablaProveedores, id);
 
 export async function listProveedoresActivos(articuloId) {
-  const store = await txStore("proveedores", "readonly");
+  const store = await txStore(nombreTablaProveedores, "readonly");
   const idx = store.index("articuloId");
+  
   return new Promise((resolve, reject) => {
     const req = idx.getAll(Number(articuloId));
     req.onsuccess = () => resolve((req.result || []).filter(p => p.activo));
     req.onerror = () => reject(req.error);
   });
 }
-
-export async function getProveedorById(id) {
-  const store = await txStore("proveedores", "readonly");
-  return new Promise((resolve, reject) => {
-    const req = store.get(Number(id));
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-export async function retirarProveedor(id) {
-  const store = await txStore("proveedores", "readwrite");
-
-  return new Promise((resolve, reject) => {
-    const reqGet = store.get(Number(id));
-
-    reqGet.onsuccess = () => {
-      const prov = reqGet.result;
-      if (!prov) {
-        resolve(false);
-        return;
-      }
-
-      prov.activo = false;
-      prov.updatedAt = new Date().toISOString();
-
-      const reqPut = store.put(prov);
-      reqPut.onsuccess = () => resolve(true);
-      reqPut.onerror = () => reject(reqPut.error);
-    };
-
-    reqGet.onerror = () => reject(reqGet.error);
-  });
-}
-
 
 /* ----------------- FLUJOS ----------------- */
 export async function upsertFlujos(proveedorId, flujos) {

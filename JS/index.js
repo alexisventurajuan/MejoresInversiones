@@ -5,34 +5,11 @@ import {
   updateArticulo
 } from "./db.js";
 
-/**
- * Convierte texto a número:
- * - admite "$", ",", "%", espacios
- * - si está vacío => NaN (para validar)
- */
-function toNumberStrict(value) {
-  const raw = String(value ?? "").trim();
-  if (!raw) return NaN;
-  const s = raw.replace(/[$,%\s]/g, "").replaceAll(",", "");
-  const n = Number(s);
-  return Number.isFinite(n) ? n : NaN;
-}
-
-/**
- * Normaliza porcentaje:
- * - si capturan 30 => 0.30
- * - si capturan 0.30 => 0.30
- * - si capturan 20 => 0.20
- */
-function normalizePct(p) {
-  if (!Number.isFinite(p)) return NaN;
-  if (p > 1) return p / 100;
-  return p;
-}
-
-
-// Set de helpers DOM
-const $ = (id) => document.getElementById(id);
+import {
+  normalizePct,
+  $,
+  toNumberStrict
+} from "./utilidades.js";
 
 const form = $("formArticulo");
 const list = $("articulosList");
@@ -181,8 +158,9 @@ btnRetirar.addEventListener("click", async () => {
   await retirarArticulo(selectedArticuloId);
 
   limpiarCamposArticulo();
-
   await renderArticulos();
+
+  alert("Artículo retirado.");
 });
 
 btnLimpiarArticulo.addEventListener("click", () => limpiarCamposArticulo());
@@ -206,6 +184,7 @@ form.addEventListener("submit", async (e) => {
     const id = await addArticulo(data);
     selectedArticuloId = id;
     localStorage.setItem("selectedArticuloId", String(id));
+    alert("Proveedor y flujos guardados correctamente.");
   }
 
   // Navegar a proveedores

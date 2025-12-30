@@ -1,18 +1,8 @@
-function money(n) {
-  if (!Number.isFinite(n)) return "—";
-  return n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
-}
-
-function pct(n) {
-  if (!Number.isFinite(n)) return "—";
-  return `${(n * 100).toFixed(2)}%`;
-}
-
-function fmtTir(x) {
-  if (x === null || x === undefined) return "—";
-  if (!Number.isFinite(x)) return "—";
-  return pct(x);
-}
+import {
+  money,
+  fmtTir,
+  $
+} from "./utilidades.js";
 
 function getPayload() {
   const raw = localStorage.getItem("calcResult");
@@ -22,10 +12,6 @@ function getPayload() {
   } catch {
     return null;
   }
-}
-
-function $(id) {
-  return document.getElementById(id);
 }
 
 function render() {
