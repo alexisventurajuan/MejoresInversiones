@@ -40,7 +40,8 @@
         </div>
 
         <!-- Retirar no elimina: marca el artículo como inactivo. -->
-        <button id="btnRetirarProveedor" class="boton" type="button">Retirar</button>
+        <button id="btnRetirarProveedor" class="boton--sec" type="button">Retirar</button>
+        <button id="btnCalcular" class="boton--sec" type="button" style="background: purple;">Calcular</button>
     </section>
 
     <main class="contenedor">
@@ -104,7 +105,6 @@
                             <label for="vidaUtilProveedor">Vida útil del artículo (años)</label>
                             <input id="vidaUtilProveedor" name="vidaUtilProveedor" type="number" step="1" min="1"
                                 placeholder="Ej. 5" required>
-                            <small>Si lo dejas vacío, se tomará la vida útil del artículo base.</small>
                         </div>
 
                         <div class="campo">
@@ -138,10 +138,9 @@
                     </div>
                 </fieldset>
 
-                <div class="acciones" style="margin-top: 1.5rem;">
+                <div class="acciones" style="margin-top: 1.5rem; justify-content: space-evenly;">
                     <button id="btnGuardarProveedor" class="boton" type="button">Guardar</button>
                     <button id="btnDetalleFlujos" class="boton" type="button">Detalle de flujos</button>
-                    <button id="btnCalcular" class="boton" type="button">Calcular</button>
                 </div>
             </section>
         </section>
@@ -165,5 +164,4 @@
     <!-- JS -->
     <script type="module" src="JS/proveedores.js"></script>
 </body>
-
 </html>
